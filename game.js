@@ -1,3 +1,4 @@
+/* الجعان عطشان | الإصدار v4 | تاريخ التحديث 2026-11-13 */
 
 const W=420,H=540,$=id=>document.getElementById(id);
 const C=$('c');C.width=W*2;C.height=H*2;
@@ -391,27 +392,50 @@ function outfit(e,x,y,bob){const o=e.os,f=e.g==='f',top=y-32-bob;
   if(f&&o===4)rr(x-4,top,8,21,2,e.c2);
   if(e.hj){rr(x-10,y-33-bob,20,9,4,e.hj);rr(x-6,y-26-bob,12,2,1,'rgba(0,0,0,.14)')}}
 function person(e){
-  const x=e.x,y=e.y,t=e.ph,m=e.moving,sw=m?Math.sin(t*11)*4:0,bob=m?Math.abs(Math.sin(t*11))*1.5:0,aw=e.work?Math.sin(t*14)*3:0,fx=e.fx||1;
+  const x=e.x,y=e.y,t=e.ph,m=e.moving;let sw=m?Math.sin(t*11)*4:0,bob=m?Math.abs(Math.sin(t*11))*1.5:0,fx=e.fx||1,ox=0,idy=0;const aw=e.work?Math.sin(t*14)*3:0;let aL=aw,aR=-aw;
+  /* حركة محسّنة للعامل والمساعدين فقط (شكل فقط، من غير أي تغيير في اللعب) */
+  if(e===Wk||HL.includes(e)){
+    const v=e.v||(e.v={wm:0,wb:0,fs:e.fx||1,px:x,py:y,lt:performance.now(),wp:0,wt:0}),now=performance.now(),dt=Math.min(.05,Math.max(0,(now-v.lt)/1000));v.lt=now;
+    const dd=Math.min(8,Math.hypot(x-v.px,y-v.py));v.px=x;v.py=y;
+    const sm=(a,b,r)=>a+(b-a)*Math.min(1,r*dt);
+    v.wm=sm(v.wm,m?1:0,12);v.wb=sm(v.wb,e.work?1:0,10);v.fs=sm(v.fs,e.fx||1,14);v.wp+=dd*.16;if(e.work)v.wt+=dt;
+    const wm=v.wm,wb=v.wb,sn=Math.sin(v.wp),wt=v.wt,k=e.task?e.task.s:0;let dip=0;fx=v.fs;
+    /* مشي: خطوة متزامنة مع المسافة، ارتداد خفيف، ميل للأمام، وتأرجح دراعات عكس الرجلين */
+    sw=sn*4*wm;bob=Math.abs(Math.cos(v.wp))*1.8*wm;ox=v.fs*1.6*wm+sn*.7*wm;aL=-sn*3*wm;aR=sn*3*wm;
+    /* وقفة: تنفس هادي */
+    bob+=(1-wm)*(1-wb)*(Math.sin(t*2.2)*.5+.5)*.8;
+    if(wb>.01){
+      if(k===3){const a=Math.abs(Math.sin(wt*9));aL=aR=-a*5*wb;dip=a*2*wb;ox+=v.fs*2*wb}                 /* سحب القصب من الشوال */
+      else if(k===6){const a=Math.sin(wt*14);aL=a*4*wb;aR=-a*4*wb;ox+=a*1.2*wb;dip=1.2*wb}              /* عصر: لف الذراع وهزة جسم */
+      else if(k===9){ox+=v.fs*1.5*wb;dip=(1.2+Math.sin(wt*10))*wb}                                        /* مدّ إيده للكوبايات */
+      else if(k===12){dip=(1.5+Math.sin(wt*8)*.6)*wb;idy=5*wb}                                           /* تسليم الطلب بانحناءة */
+      else if(k===1){const a=Math.sin(wt*12);aL=a*3*wb;aR=-a*3*wb;dip=Math.abs(a)*wb}                    /* تجهيز الطلب */
+      else{aL=aw*wb;aR=-aw*wb}
+    }
+    bob-=dip;
+  }
   const cu=e.os!==undefined,f=e.g==='f',bare=cu&&f&&(e.os===1||e.os===2),short=cu&&!f&&e.os===4,sleeveless=cu&&((!f&&e.os===4)||(f&&e.os===1));
   X.fillStyle='rgba(0,0,0,.25)';X.beginPath();X.ellipse(x,y,11,4,0,0,7);X.fill();
   const lc=cu?((bare||short)?e.skin:e.pants):'#3b3b58';
   R(x-7,y-13,5,12+sw*.5,lc);R(x+2,y-13,5,12-sw*.5,lc);
   if(short){R(x-7,y-13,5,7,e.pants);R(x+2,y-13,5,7,e.pants)}
   R(x-8,y-2+sw*.5,7,3,'#1a1a1a');R(x+1,y-2-sw*.5,7,3,'#1a1a1a');
+  X.save();X.translate(ox,0);
   if(cu)hairBack(x,y-40-bob,9,e);
   rr(x-10,y-32-bob,20,21,5,e.shirt);
   if(cu)outfit(e,x,y,bob);
   if(e.apron){rr(x-7,y-29-bob,14,17,3,'#fff');R(x-7,y-24-bob,14,2,'#ffb300')}
   const car=!!e.carry,sl=sleeveless?e.skin:e.shirt;
   if(car){R(x-13,y-28-bob,5,10,sl);R(x+8,y-28-bob,5,10,sl);circ(x-6,y-18-bob,2.6,e.skin);circ(x+6,y-18-bob,2.6,e.skin)}
-  else{R(x-14,y-29-bob+aw,4,12,sl);R(x+10,y-29-bob-aw,4,12,sl);circ(x-12,y-16-bob+aw,2.6,e.skin);circ(x+12,y-16-bob-aw,2.6,e.skin)}
+  else{R(x-14,y-29-bob+aL,4,12,sl);R(x+10,y-29-bob+aR,4,12,sl);circ(x-12,y-16-bob+aL,2.6,e.skin);circ(x+12,y-16-bob+aR,2.6,e.skin)}
   circ(x,y-40-bob,9,e.skin);
   if(cu)hairFront(x,y-40-bob,9,e);else{X.fillStyle=e.hair;X.beginPath();X.arc(x,y-41-bob,9.5,Math.PI,0);X.fill()}
   if(e.hat){rr(x-9,y-54-bob,18,8,3,'#fff');R(x-10,y-47-bob,20,3,'#fff')}
   R(x-4+fx,y-40-bob,2,3,'#222');R(x+2+fx,y-40-bob,2,3,'#222');
   if(cu&&f){X.strokeStyle='#222';X.lineWidth=.8;X.beginPath();X.moveTo(x-4.6+fx,y-40.3-bob);X.lineTo(x-5.4+fx,y-41.4-bob);X.moveTo(x+4.4+fx,y-40.3-bob);X.lineTo(x+5.2+fx,y-41.4-bob);X.stroke()}
   X.strokeStyle=cu?(f?'#b0385a':'#5a2415'):'#8a3a2a';X.lineWidth=1;X.beginPath();X.arc(x+fx,y-36-bob,2.5,.2,2.9);X.stroke();
-  if(car)item(e.carry,x,y-21-bob,e.item);
+  if(car)item(e.carry,x,y-21-bob+idy,e.item);
+  X.restore();
 }
 function easeB(x){const c=1.70158;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2)}
 function star(x,y,r,c){X.fillStyle=c;X.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,d=i%2?r*.45:r;X[i?'lineTo':'moveTo'](x+Math.cos(a)*d,y+Math.sin(a)*d)}X.closePath();X.fill()}
