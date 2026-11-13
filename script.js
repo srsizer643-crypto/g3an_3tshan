@@ -1,4 +1,4 @@
-/* دكان السعادة | الإصدار v5 | تاريخ التحديث 2026-11-13 */
+/* دكان السعادة | الإصدار v6 | تاريخ التحديث 2026-11-13 */
 (function(){
 'use strict';
 var play=document.getElementById('play'),frame=document.getElementById('frame'),
@@ -6,7 +6,7 @@ var play=document.getElementById('play'),frame=document.getElementById('frame'),
 
 function open(){
   // يتحمّل الإطار مرة واحدة فقط، فيفضل التقدم شغال عند الرجوع للموقع
-  if(!loaded){frame.src='game.html?v=7';loaded=true;hit('plays');}
+  if(!loaded){frame.src='game.html?v=8';loaded=true;hit('plays');}
   play.hidden=false;document.documentElement.classList.add('playing');
   if(location.hash!=='#play')history.pushState(null,'','#play');
   setTimeout(function(){try{frame.contentWindow.focus()}catch(e){}},300);
