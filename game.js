@@ -1,4 +1,4 @@
-/* الجعان عطشان | الإصدار v4 | تاريخ التحديث 2026-11-13 */
+/* دكان السعادة | الإصدار v5 | تاريخ التحديث 2026-11-13 */
 
 const W=420,H=540,$=id=>document.getElementById(id);
 const C=$('c');C.width=W*2;C.height=H*2;
@@ -104,7 +104,7 @@ function buildBG(){
   X.save();X.translate(30,0);X.textAlign='center';X.direction='rtl';
   // sign: wooden frame, green board, marquee bulbs
   rr(80,6,200,50,10,WD);rr(84,10,192,42,7,'#1f5a34');rr(88,14,184,34,5,'#27703f');
-  X.textAlign='center';X.direction='rtl';X.font='bold 25px Tahoma,Arial';X.lineJoin='round';X.lineWidth=4;X.strokeStyle='#123a22';X.strokeText('الجعان عطشان',180,40);X.fillStyle='#ffb347';X.fillText('الجعان عطشان',180,40);
+  X.textAlign='center';X.direction='rtl';X.font='bold 25px Tahoma,Arial';X.lineJoin='round';X.lineWidth=4;X.strokeStyle='#123a22';X.strokeText('دكان السعادة',180,40);X.fillStyle='#ffb347';X.fillText('دكان السعادة',180,40);
   const bulb=(x,y)=>{circ(x,y,5,'rgba(255,200,90,.28)');circ(x,y,2.1,'#fff1b0')};
   for(let x=92;x<=268;x+=14){bulb(x,8);bulb(x,54)}
   for(const y of[20,32,44]){bulb(83,y);bulb(277,y)}
