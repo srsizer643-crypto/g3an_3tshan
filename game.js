@@ -173,7 +173,7 @@ function buildBG(){
 }
 
 /* ---------- game state ---------- */
-const ST={store:{x:373,y:164},juicer:{x:240,y:160},cups:{x:301,y:160},serve:{x:316,y:228},idle:{x:300,y:195}};
+const ST={store:{x:373,y:164},juicer:{x:240,y:160},cups:{x:301,y:160},serve:{x:316,y:228},idle:{x:300,y:195},fridge:{x:52,y:156},fridgeW:{x:86,y:188}};
 const SKINS=['#f7dcc4','#ecc19a','#d29a66','#b07744','#8a5530','#5a3722'],SHIRTS=['#e53935','#1e88e5','#8e24aa','#fb8c00','#00897b','#6d4c41','#d81b60','#3949ab','#7cb342','#546e7a'],HAIRS=['#14100d','#2b1b10','#4a2c12','#6b4423','#8a3b1d','#c9a24a'],PANTS=['#3b3b58','#37474f','#5d4037','#263238','#455a64','#1a237e'];
 const HJC=['#8e24aa','#00897b','#d81b60','#3949ab','#e9d8b4','#546e7a','#c2185b','#2e7d32'];
 function mkLook(){const g=Math.random()<.5?'m':'f',sh=pick(SHIRTS);let c2=pick(SHIRTS);while(c2===sh)c2=pick(SHIRTS);
@@ -190,19 +190,37 @@ const mkM=()=>({run:false,t:0,total:3,rot:0,glass:0,col:'#b5d94a'}),LX=[330,210,
 const HL=[{i:0,lane:1,k:1.2,mx:165,home:{x:196,y:228},jx:165,jy:160,sv:{x:196,y:228},m:mkM(),x:196,y:228,ph:0,fx:1,carry:null,task:null,item:'cane',skin:'#d29a66',shirt:'#e53935',hair:'#14100d',apron:true,hat:true},{i:1,lane:2,k:1.5,mx:90,home:{x:76,y:228},jx:90,jy:160,sv:{x:76,y:228},m:mkM(),x:76,y:228,ph:0,fx:1,carry:null,task:null,item:'cane',skin:'#f7dcc4',shirt:'#8e24aa',hair:'#4a2c12',apron:true,hat:true}];
 const HS=()=>HL.slice(0,S.u.hire),mUp=(m,dt)=>{if(m.run){m.t-=dt;m.rot+=dt*14;m.glass=Math.min(1,1-m.t/m.total);if(m.t<=0){m.run=false;m.glass=1}}};
 const say=(e,t,l)=>{e.bt=t;e.bl=l||2},HSAY={a:['أمرك يا باشا','حاضر يا فندم','ثواني وتكون جاهزة','من عنيا'],m:['العصير بيتعصر','قصب طازة','لحظة واحدة'],d:['اتفضل يا فندم','الكوباية جاهزة','بالهنا والشفا']},CSAY=['تسلم','عايزها سريعة','شكراً يا اسطى','متتأخرش'];
+/* ---------- الثلاجة: محطة مشتركة (عامل واحد في المرة) ---------- */
+const FS={by:null,q:[],age:0};
+const fsAlive=w=>!!(w.task&&(w.task.s===20||w.task.s===21));
+function fsFree(w){if(FS.by===w)FS.by=null;const i=FS.q.indexOf(w);if(i>=0)FS.q.splice(i,1)}
+function fsReq(w){if(FS.by===w)return true;if(FS.by)return false;if(FS.q.length&&FS.q[0]!==w)return false;const i=FS.q.indexOf(w);if(i>=0)FS.q.splice(i,1);FS.by=w;FS.age=0;return true}
+function fsTick(dt){
+  if(FS.by){FS.age+=dt;if(!fsAlive(FS.by))FS.by=null;else if(FS.age>8){const w=FS.by;FS.by=null;w.task.s=20}}
+  FS.q=FS.q.filter(fsAlive)}
+/* حالة 20: رايح الثلاجة أو مستني دوره | حالة 21: بياخد المنتج. بترجع true لما يخلص */
+function fridgeStep(w,t,sp,dt,dw){
+  if(t.s===20){
+    const turn=!FS.by&&(!FS.q.length||FS.q[0]===w)||FS.by===w;
+    if(!turn){if(!FS.q.includes(w))FS.q.push(w);t.fq=t.fq||0;if(move(w,ST.fridgeW.x,ST.fridgeW.y,sp,dt)){t.fq+=dt;if(t.fq>10){fsFree(w);return true}}return false}
+    if(move(w,ST.fridge.x,ST.fridge.y,sp,dt)&&fsReq(w)){t.s=21;t.w=FT;if(w.i!==undefined)say(w,'من الثلاجة',1.4)}
+    return false}
+  w.work=true;t.w-=dw;if(t.w<=0){fsFree(w);return true}
+  return false}
 function hUpdate(h,dt){
   if(h.bl>0)h.bl-=dt;h.moving=false;h.work=false;h.ph+=dt;const L=k=>S.u['w'+h.i+k]||0,sp=wkSpeed()*.85*h.k*(1+.15*L('walk')),dw=dt*(1+.25*L('work')),t=h.task,m=h.m;
-  if(!t){move(h,h.home.x,h.home.y,sp,dt);const c=qL(h.lane).find(c=>c.ready&&!c.taken);if(c){c.taken=true;h.task={c,s:1,w:1};h.item=c.item;say(h,gf(c,pick(HSAY.a)),2);say(c,pick(CSAY),1.8)}return}
-  const c=t.c;if(c.st!=='q'){h.task=null;h.carry=null;m.run=false;m.glass=0;return}
+  if(!t){move(h,h.home.x,h.home.y,sp,dt);const c=qL(h.lane).find(c=>c.ready&&!c.taken);if(c){c.taken=true;h.task={c,s:1,w:WS};h.item=c.item;say(h,gf(c,pick(HSAY.a)),2);say(c,pick(CSAY),1.8)}return}
+  const c=t.c;if(c.st!=='q'){fsFree(h);h.task=null;h.carry=null;m.run=false;m.glass=0;return}
   switch(t.s){
-    case 1:h.work=true;t.w-=dw;if(t.w<=0)t.s=2;break;
-    case 2:if(move(h,ST.store.x,ST.store.y,sp,dt)){t.s=3;t.w=.6}break;
+    case 1:h.work=true;t.w-=dw;if(t.w<=0)t.s=cold(h.item)?20:2;break;
+    case 20:case 21:if(fridgeStep(h,t,sp,dt,dw))t.s=2;break;
+    case 2:if(move(h,ST.store.x,ST.store.y,sp,dt)){t.s=3;t.w=.6*WS}break;
     case 3:h.work=true;t.w-=dw;if(t.w<=0){h.carry='cane';t.s=5}break;
     case 5:if(move(h,h.jx,h.jy,sp,dt)){h.carry=null;m.col=ITEMS[h.item].col;m.run=true;m.total=m.t=juiceTime()*1.25*Math.pow(.85,L('juice'));m.glass=0;t.s=6;say(h,pick(HSAY.m),2)}break;
     case 6:h.work=true;if(!m.run){h.carry='juice';m.glass=0;t.s=8}break;
-    case 8:if(move(h,ST.cups.x,ST.cups.y,sp,dt)){t.s=9;t.w=.7}break;
+    case 8:if(move(h,ST.cups.x,ST.cups.y,sp,dt)){t.s=9;t.w=.7*WS}break;
     case 9:h.work=true;t.w-=dw;if(t.w<=0){h.carry='cup';t.s=11}break;
-    case 11:if(move(h,h.sv.x,h.sv.y,sp,dt)){t.s=12;t.w=.4}break;
+    case 11:if(move(h,h.sv.x,h.sv.y,sp,dt)){t.s=12;t.w=.4*WS}break;
     case 12:h.work=true;t.w-=dw;if(t.w<=0){c.hb=L('tip');c.pay=Math.round(cPrice(c)*(1+.08*L('price')));serve(c);h.carry=null;h.task=null;say(h,pick(HSAY.d),2);say(c,'تسلم إيدك',1.8)}break}}
 const ITEMS={
  cane:{n:'عصير قصب',i:'cup',lv:1,mul:1,col:'#b5d94a'},
@@ -213,7 +231,7 @@ const ITEMS={
   [['يا معلم','كوباية قصب بليمون يا ريس'],['أمرك يا حبيبي','بليمون فريش']],
   [['الجو حر قوي','عايز قصب بليمون بسرعة'],['حاضر يا باشا','ثواني وتشرب']],
   [['صباح الخير','قصب بليمون لو سمحت'],['صباح النور','تحت أمرك']]]},
- iced:{n:'قصب ساقع',i:'iced',lv:3,mul:2.2,col:'#c4ecd9',lines:[
+ iced:{n:'قصب ساقع',i:'iced',lv:3,mul:2.2,cold:true,col:'#c4ecd9',lines:[
   [['الجو نار يا اسطى','عايز قصب ساقع'],['عندنا اللي يبرّد','ساقع حالاً']],
   [['يا معلم','كوباية قصب ساقع'],['من عنيا','ساقع زي التلج']],
   [['عايز حاجة تتلج','قصب ساقع لو سمحت'],['أمرك يا غالي','ثواني وتكون ساقعة']],
@@ -278,12 +296,17 @@ const itemPrice=k=>Math.round(price()*ITEMS[k].mul*(k==='lemon'?1+.12*S.u.lemon:
 const cPrice=c=>Math.round(itemPrice(c.item)*(c.big?1.6:1)),qcap=()=>4+S.u.seats+(RU.on?1:0),qsp=()=>qcap()>5?32:38;
 const HAGS=['غالي كده! خليها','معلش اعمل حسابي، خليها','هو ده آخر سعر؟ خليها'];
 const RU={on:false,t:0,next:70},FR={t:0};let coins=[];
-const pat=it=>24+4*S.u.fan+(it==='iced'?3*S.u.ice:0);
+/* تحديث 1: ثوابت الصعوبة. WS=بطء الشغل اليدوي، JSLOW=بطء العصر، FT=وقت الأخذ من الثلاجة، COLDPAT=صبر زيادة لطلبات التبريد */
+const WS=1.3,JSLOW=1.2,FT=.9,COLDPAT=8,cold=k=>!!(ITEMS[k]&&ITEMS[k].cold);
+const pat=it=>24+4*S.u.fan+(it==='iced'?3*S.u.ice+COLDPAT:0);
 let cust=[],pops=[],spawnT=.4,hudT=0,saveT=0;
-const juiceTime=()=>3.2*Math.pow(.82,S.u.juice)*Math.pow(.78,S.u.juice2),wkSpeed=()=>70*(1+.18*S.u.speed),price=()=>10+4*S.u.price,level=()=>1+Math.floor(S.sold/25);
+const juiceTime=()=>3.2*JSLOW*Math.pow(.82,S.u.juice)*Math.pow(.78,S.u.juice2),FRT=()=>juiceTime()/JSLOW*2.2,wkSpeed=()=>56*(1+.18*S.u.speed),price=()=>10+4*S.u.price,level=()=>1+Math.floor(S.sold/25);
 const qL=l=>cust.filter(c=>c.st==='q'&&(c.lane||0)===l),qList=()=>qL(0);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
-function pickItem(){const un=Object.keys(ITEMS).filter(k=>ITEMS[k].lv<=level());let tot=0;const w=un.map(k=>{const v=k==='cane'?3:2;tot+=v;return v});let r=Math.random()*tot;for(let i=0;i<un.length;i++){r-=w[i];if(r<=0)return un[i]}return 'cane'}
+let coldRun=0;
+function pickItem(){let un=Object.keys(ITEMS).filter(k=>ITEMS[k].lv<=level());if(coldRun>=2){const nc=un.filter(k=>!ITEMS[k].cold);if(nc.length)un=nc}
+  let tot=0;const w=un.map(k=>{const v=k==='cane'?3:2;tot+=v;return v});let r=Math.random()*tot,it='cane';for(let i=0;i<un.length;i++){r-=w[i];if(r<=0){it=un[i];break}}
+  coldRun=ITEMS[it].cold?coldRun+1:0;return it}
 function addCust(ln){ln=ln||0;const lk=mkLook(),item=pickItem(),n=linesOf(item,lk.g).length,hag=!ln&&S.sold>=12&&Math.random()<.12?{st:'pre'}:null;
   cust.push({x:210,y:H+16,ph:Math.random()*5,fx:1,st:'q',wp:true,ready:false,carry:null,l:0,pt:pat(item),pm:pat(item),item,hag,lane:ln,big:S.u.big>0&&Math.random()<.3,line:Math.floor(Math.random()*n),...lk})}
 function avatar(e){const cv=document.createElement('canvas');cv.width=cv.height=88;const main=X;X=cv.getContext('2d');
@@ -305,7 +328,7 @@ function chatTick(dt){const c=CH.c;if(!c)return;const ch=c.chat;
   if(ch&&c.hag&&c.hag.st==='pre'&&CH.n>=ch.msgs.length&&ch.t>=ch.total){c.hag.st='ask';$('hagBtns').classList.add('show')}
   if(CH.fin>0){CH.fin-=dt;if(CH.fin<=0){$('chat').classList.remove('show');$('hagBtns').classList.remove('show');CH.c=null}}}
 function leave(c,angry){c.st='l';c.l=0;if(angry)pops.push({x:c.x,y:c.y-70,t:0,k:'angry'});
-  if(Wk.task&&Wk.task.c===c){if(Wk.task.fs)S.stock++;Wk.task=null;Wk.carry=null;M.run=false;M.glass=0}
+  if(Wk.task&&Wk.task.c===c){fsFree(Wk);if(Wk.task.fs)S.stock++;Wk.task=null;Wk.carry=null;M.run=false;M.glass=0}
   if(CH.c===c)$('hagBtns').classList.remove('show')}
 function leaveAngry(c){leave(c,true);if(CH.c===c){addMsg(c,{w:0,t:'مش هستنى أكتر، سلام!'});CH.fin=2.2}}
 function hagChoose(yes){const c=CH.c;if(!c||!c.hag||c.hag.st!=='ask')return;$('hagBtns').classList.remove('show');c.hag.st='done';S.haggles++;
@@ -327,13 +350,14 @@ function wkUpdate(dt){
   if(t&&talking())return;
   if(!t){move(w,ST.idle.x,ST.idle.y,sp,dt);return}
   switch(t.s){
-    case 2:if(move(w,ST.store.x,ST.store.y,sp,dt)){t.s=3;t.w=.6}break;
+    case 20:case 21:if(fridgeStep(w,t,sp,dt,dt)){if(S.stock>0){S.stock--;FR.t=0;t.fs=true;w.carry='cup';t.s=10}else t.s=1}break;
+    case 2:if(move(w,ST.store.x,ST.store.y,sp,dt)){t.s=3;t.w=.6*WS}break;
     case 3:w.work=true;t.w-=dt;if(t.w<=0){w.carry='cane';t.s=4}break;
     case 5:if(move(w,ST.juicer.x,ST.juicer.y,sp,dt)){w.carry=null;M.col=(ITEMS[w.item]||ITEMS.cane).col;M.run=true;M.total=M.t=juiceTime();M.glass=0;t.s=6}break;
     case 6:w.work=true;if(!M.run){w.carry='juice';M.glass=0;t.s=7}break;
-    case 8:if(move(w,ST.cups.x,ST.cups.y,sp,dt)){t.s=9;t.w=.7}break;
+    case 8:if(move(w,ST.cups.x,ST.cups.y,sp,dt)){t.s=9;t.w=.7*WS}break;
     case 9:w.work=true;t.w-=dt;if(t.w<=0){w.carry='cup';t.s=10}break;
-    case 11:if(move(w,ST.serve.x,ST.serve.y,sp,dt)){t.s=12;t.w=.4}break;
+    case 11:if(move(w,ST.serve.x,ST.serve.y,sp,dt)){t.s=12;t.w=.4*WS}break;
     case 12:w.work=true;t.w-=dt;if(t.w<=0){serve(t.c);w.carry=null;w.task=null}break;
   }
 }
@@ -349,7 +373,7 @@ function update(dt){
   const XP=c=>{const g=(c.lane||0)===2?150:270;return[[g,c.y+6],[g,490],[210,490],[210,H+20]]};
   for(const c of cust)if(c.st==='l'){const L=c.ex||(c.ex=XP(c));c.moving=false;c.ph+=dt;c.sayT=Math.max(0,(c.sayT||0)-dt);if(c.bl>0)c.bl-=dt;if(move(c,L[c.l][0],L[c.l][1],62,dt)){c.l++;if(c.l>=L.length)c.dead=true}}
   cust=cust.filter(c=>!c.dead);
-  wkUpdate(dt);HS().forEach(h=>{hUpdate(h,dt);mUp(h.m,dt)});extra(dt);
+  fsTick(dt);wkUpdate(dt);HS().forEach(h=>{hUpdate(h,dt);mUp(h.m,dt)});extra(dt);
   if(M.run){M.t-=dt;M.rot+=dt*14;M.glass=Math.min(1,1-M.t/M.total);if(M.t<=0){M.run=false;M.glass=1}}
   for(const p of pops){p.t+=dt;p.y-=18*dt}
   pops=pops.filter(p=>p.t<1.7);
@@ -407,7 +431,7 @@ function person(e){
     if(wb>.01){
       if(k===3){const a=Math.abs(Math.sin(wt*9));aL=aR=-a*5*wb;dip=a*2*wb;ox+=v.fs*2*wb}                 /* سحب القصب من الشوال */
       else if(k===6){const a=Math.sin(wt*14);aL=a*4*wb;aR=-a*4*wb;ox+=a*1.2*wb;dip=1.2*wb}              /* عصر: لف الذراع وهزة جسم */
-      else if(k===9){ox+=v.fs*1.5*wb;dip=(1.2+Math.sin(wt*10))*wb}                                        /* مدّ إيده للكوبايات */
+      else if(k===9||k===21){ox+=v.fs*1.5*wb;dip=(1.2+Math.sin(wt*10))*wb}                                        /* مدّ إيده للكوبايات */
       else if(k===12){dip=(1.5+Math.sin(wt*8)*.6)*wb;idy=5*wb}                                           /* تسليم الطلب بانحناءة */
       else if(k===1){const a=Math.sin(wt*12);aL=a*3*wb;aR=-a*3*wb;dip=Math.abs(a)*wb}                    /* تجهيز الطلب */
       else{aL=aw*wb;aR=-aw*wb}
@@ -521,14 +545,17 @@ function extra(dt){
   if(S.sold>=10){
     if(!RU.on){RU.next-=dt;if(RU.next<=0){RU.on=true;RU.t=22;toast(tt('flame','ساعة الذروة!','زباين كتير والبقشيش مضاعف'));snd('rush')}}
     else{RU.t-=dt;if(RU.t<=0){RU.on=false;RU.next=70+Math.random()*40;S.rushes++;toast(tt('check','خلصت ساعة الذروة','عاش يا اسطى'));checkAch();save()}}}
-  if(S.u.fridge>0&&S.stock<S.u.fridge){if(!Wk.task){FR.t+=dt;if(FR.t>=juiceTime()*2.2){FR.t=0;S.stock++;save()}}}else FR.t=0;
+  if(S.u.fridge>0&&S.stock<S.u.fridge){if(!Wk.task){FR.t+=dt;if(FR.t>=FRT()){FR.t=0;S.stock++;save()}}}else FR.t=0;
   for(const c of coins)c.t+=dt;
   const n=coins.length;coins=coins.filter(c=>c.t<c.d);
   if(coins.length<n){const h=$('hm');h.classList.remove('bump');void h.offsetWidth;h.classList.add('bump')}
 }
 function drawFridge(){
   for(let i=0;i<S.stock;i++){const x=19+i*9;X.fillStyle='rgba(255,255,255,.92)';X.beginPath();X.moveTo(x,100);X.lineTo(x+7,100);X.lineTo(x+6,111);X.lineTo(x+1,111);X.fill();R(x+.7,104,5.6,6,'#b5d94a');R(x-.5,99,8,1.6,'#e53935')}
-  if(S.u.fridge>0&&S.stock<S.u.fridge){R(17,112.5,26,2,'rgba(0,0,0,.25)');R(17,112.5,26*Math.min(1,FR.t/(juiceTime()*2.2)),2,'#66bb6a')}
+  if(S.u.fridge>0&&S.stock<S.u.fridge){R(17,112.5,26,2,'rgba(0,0,0,.25)');R(17,112.5,26*Math.min(1,FR.t/FRT()),2,'#66bb6a')}
+  const fw=FS.by,ft=fw&&fw.task&&fw.task.s===21?1-Math.max(0,fw.task.w)/FT:0;
+  circ(43,90.5,1.8,fw?'#e53935':'#66bb6a');
+  if(ft>0){R(17,115.5,26,2.2,'rgba(0,0,0,.3)');R(17,115.5,26*Math.min(1,ft),2.2,'#4dd0e1')}
 }
 function drawCoins(){for(const c of coins){if(c.t<0)continue;const p=c.t/c.d,e=p*p*(3-2*p),x=c.x0+(W-34-c.x0)*e,y=c.y0+(-14-c.y0)*e-Math.sin(Math.PI*p)*26,r=6-2*p;circ(x,y,r,'#c98b1f');circ(x,y,r*.78,'#ffc107');circ(x-r*.2,y-r*.2,r*.25,'#fff3b0')}}
 
@@ -550,11 +577,13 @@ function talking(){const t=Wk.task;if(!t)return false;const c=t.c;if(c.hag&&c.ha
 function target(){const t=Wk.task;
   if(t&&talking())return{z:null,m:t.c.hag&&t.c.hag.st!=='done'?'الزبون بيساوم... استنى واختار من الشات':'الزبون بيسأل... استنى لما يخلص كلامه'};
   if(!t){const c=qList().find(c=>c.ready);return c?{z:{x:c.x-26,y:c.y-82,w:52,h:90},m:'اضغط على طلب الزبون لتبدأ'}:{z:null,m:'بانتظار الزبائن...'}}
+  if(t.s===20)return{z:null,m:FS.by&&FS.by!==Wk?'الثلاجة مشغولة... العامل مستني دوره':'العامل رايح الثلاجة يجيب الطلب...'};
+  if(t.s===21)return{z:null,m:'العامل بياخد من الثلاجة...'};
   const k={1:['cane','اضغط على القصب'],4:['machine','اضغط على ماكينة العصير'],7:['cups','اضغط على طاولة الأكواب'],10:['counter','اضغط على الكاونتر لتسليم الطلب']}[t.s];
   if(k)return{z:Z[k[0]],m:k[1]};
   return{z:null,m:t.s===6?'العصير قيد التجهيز...':'جاري التنفيذ...'}}
 function tap(x,y){const w=Wk,t=w.task,h=z=>x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h;
-  if(!t){const c=qList().find(c=>c.ready&&h({x:c.x-26,y:c.y-82,w:52,h:90}));if(c){w.item=c.item;if(S.stock>0){S.stock--;FR.t=0;w.carry='cup';w.task={c,s:10,w:0,fs:true}}else w.task={c,s:1,w:0};startChat(c)}return}
+  if(!t){const c=qList().find(c=>c.ready&&h({x:c.x-26,y:c.y-82,w:52,h:90}));if(c){w.item=c.item;if(cold(c.item))w.task={c,s:20,w:0};else if(S.stock>0){S.stock--;FR.t=0;w.carry='cup';w.task={c,s:10,w:0,fs:true}}else w.task={c,s:1,w:0};startChat(c)}return}
   if(talking())return;
   if(t.s===1&&h(Z.cane))t.s=2;else if(t.s===4&&h(Z.machine))t.s=5;else if(t.s===7&&h(Z.cups))t.s=8;else if(t.s===10&&h(Z.counter))t.s=11}
 C.addEventListener('pointerdown',ev=>{const r=C.getBoundingClientRect();tap((ev.clientX-r.left)/r.width*W,(ev.clientY-r.top)/r.height*H)});

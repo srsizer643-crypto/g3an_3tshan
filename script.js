@@ -6,7 +6,7 @@ var play=document.getElementById('play'),frame=document.getElementById('frame'),
 
 function open(){
   // يتحمّل الإطار مرة واحدة فقط، فيفضل التقدم شغال عند الرجوع للموقع
-  if(!loaded){frame.src='game.html?v=5';loaded=true;hit('plays');}
+  if(!loaded){frame.src='game.html?v=7';loaded=true;hit('plays');}
   play.hidden=false;document.documentElement.classList.add('playing');
   if(location.hash!=='#play')history.pushState(null,'','#play');
   setTimeout(function(){try{frame.contentWindow.focus()}catch(e){}},300);
